@@ -1,0 +1,21 @@
+# --- Arduino / build artifacts ---
+*.bin
+*.elf
+*.hex
+*.map
+*.o
+*.a
+*.d
+
+# --- Archives / exports ---
+*.zip
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- Generic build folders (if any) ---
+build/
+**/build/
