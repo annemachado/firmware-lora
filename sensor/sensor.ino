@@ -24,6 +24,7 @@ const uint8_t MSG_ACK    = 0xC1;
 const uint32_t ACK_TIMEOUT_MS = 1500;
 const uint8_t  MAX_RETRIES    = 2;   // total de tentativas = 1 + MAX_RETRIES
 const uint32_t DEFAULT_PERIOD_MS = 2000;
+const char FW_ID[] = "sensor";
 
 enum SendMode {
   MODE_STATUS = 0,
@@ -34,9 +35,14 @@ enum SendMode {
 uint32_t period_ms = DEFAULT_PERIOD_MS;
 SendMode send_mode = MODE_MIXED;
 uint16_t mixed_interval = 5;
+bool transmitting = false;
+int current_sf = 7;
+char run_id[16] = "";
 
 void handleSerial();
 void processCommand(char *line);
+void printConfig();
+const char *modeLabel();
 
 
 void setup() {
@@ -46,12 +52,12 @@ void setup() {
   LoRa.setPins(LORA_SS, LORA_RST, LORA_DIO0);
 
   if (!LoRa.begin(LORA_FREQ)) {
-    Serial.println("LoRa.begin() falhou. Verifique pinos/placa.");
+    Serial.println("# LoRa.begin() falhou. Verifique pinos/placa.");
     while (true) {}
   }
 
   // parâmetros básicos
-  LoRa.setSpreadingFactor(7);     // SF7 (inicial)
+  LoRa.setSpreadingFactor(current_sf);     // SF7 (inicial)
   LoRa.setSignalBandwidth(125E3); // BW 125 kHz
   LoRa.setCodingRate4(5);         // CR 4/5
   LoRa.setTxPower(14);            // 14 dBm
@@ -59,13 +65,32 @@ void setup() {
 
 
   delay(1500);
-  Serial.println("TX pronto. Enviando STATUS + aguardando ACK...");
-  Serial.println("DevID,MsgType,Uptime_ms,Seq,attempt_final,ack_ok,RTT_ms,RSSI_dBm,SNR_dB,Battery_mV,Flags,EventClass");
+  Serial.print("# BOOT ");
+  Serial.print(FW_ID);
+  Serial.print(" freq=");
+  Serial.print((uint32_t)LORA_FREQ);
+  Serial.print(" sf=");
+  Serial.print(current_sf);
+  Serial.print(" bw=125000 cr=4/5 tx=14 period_ms=");
+  Serial.print(period_ms);
+  Serial.print(" mode=");
+  Serial.print(modeLabel());
+  Serial.print(" mixed_interval=");
+  Serial.print(mixed_interval);
+  Serial.print(" ack_timeout=");
+  Serial.print(ACK_TIMEOUT_MS);
+  Serial.print(" max_retries=");
+  Serial.println(MAX_RETRIES);
+  Serial.println("# TX pronto. Aguardando start.");
 
 }
 
 void loop() {
   handleSerial();
+  if (!transmitting) {
+    delay(10);
+    return;
+  }
   uint32_t t_loop0 = millis();
 
   seq++;
@@ -251,8 +276,57 @@ void processCommand(char *line) {
       return;
     }
     LoRa.setSpreadingFactor(sf);
+    current_sf = sf;
     Serial.print("# sf ");
     Serial.println(sf);
+    return;
+  }
+
+  if (strcmp(token, "start") == 0) {
+    transmitting = true;
+    Serial.print("# START dev_id=");
+    Serial.print(DEV_ID);
+    Serial.print(" run=");
+    Serial.print(run_id[0] ? run_id : "-");
+    Serial.print(" freq=");
+    Serial.print((uint32_t)LORA_FREQ);
+    Serial.print(" sf=");
+    Serial.print(current_sf);
+    Serial.print(" bw=125000 cr=4/5 tx=14 period_ms=");
+    Serial.print(period_ms);
+    Serial.print(" mode=");
+    Serial.print(modeLabel());
+    Serial.print(" mixed_interval=");
+    Serial.print(mixed_interval);
+    Serial.print(" ack_timeout=");
+    Serial.print(ACK_TIMEOUT_MS);
+    Serial.print(" max_retries=");
+    Serial.println(MAX_RETRIES);
+    Serial.println("# DevID,MsgType,Uptime_ms,Seq,attempt_final,ack_ok,RTT_ms,RSSI_dBm,SNR_dB,Battery_mV,Flags,EventClass");
+    return;
+  }
+
+  if (strcmp(token, "stop") == 0) {
+    transmitting = false;
+    Serial.println("# stopped");
+    return;
+  }
+
+  if (strcmp(token, "run") == 0) {
+    char *value = strtok(nullptr, " ");
+    if (!value) {
+      Serial.println("# usage: run <id>");
+      return;
+    }
+    strncpy(run_id, value, sizeof(run_id) - 1);
+    run_id[sizeof(run_id) - 1] = '\0';
+    Serial.print("# run ");
+    Serial.println(run_id);
+    return;
+  }
+
+  if (strcmp(token, "status") == 0) {
+    printConfig();
     return;
   }
 
@@ -294,4 +368,31 @@ void processCommand(char *line) {
   }
 
   Serial.println("# unknown command");
+}
+
+void printConfig() {
+  Serial.print("# CONFIG period_ms=");
+  Serial.print(period_ms);
+  Serial.print(" sf=");
+  Serial.print(current_sf);
+  Serial.print(" mode=");
+  Serial.print(modeLabel());
+  Serial.print(" mixed_interval=");
+  Serial.print(mixed_interval);
+  Serial.print(" ack_timeout=");
+  Serial.print(ACK_TIMEOUT_MS);
+  Serial.print(" max_retries=");
+  Serial.println(MAX_RETRIES);
+}
+
+const char *modeLabel() {
+  switch (send_mode) {
+    case MODE_STATUS:
+      return "status";
+    case MODE_ALERT:
+      return "alert";
+    case MODE_MIXED:
+    default:
+      return "mixed";
+  }
 }
