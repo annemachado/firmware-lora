@@ -28,6 +28,7 @@ void setup() {
   LoRa.setCodingRate4(5);
   LoRa.setTxPower(14);            // 14 dBm
   LoRa.enableCrc();
+  LoRa.receive();
   
   delay(1000);
   Serial.println("RX pronto. Aguardando pacotes...");
@@ -145,4 +146,3 @@ void loop() {
   Serial.println();
 
 }
-
