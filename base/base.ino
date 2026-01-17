@@ -11,6 +11,8 @@ const uint8_t MSG_ALERT  = 0xA1;
 const uint8_t MSG_STATUS = 0xB1;
 const uint8_t MSG_ACK    = 0xC1;
 
+uint8_t current_sf = 7;
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) {}
@@ -23,7 +25,7 @@ void setup() {
   }
 
   // MESMOS parâmetros do TX
-  LoRa.setSpreadingFactor(7);
+  LoRa.setSpreadingFactor(current_sf);
   LoRa.setSignalBandwidth(125E3);
   LoRa.setCodingRate4(5);
   LoRa.setTxPower(14);            // 14 dBm
@@ -35,6 +37,35 @@ void setup() {
 }
 
 void loop() {
+  static char cmd_buf[32];
+  static uint8_t cmd_len = 0;
+
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (cmd_len > 0) {
+        cmd_buf[cmd_len] = '\0';
+        if (strncmp(cmd_buf, "sf ", 3) == 0) {
+          int sf = atoi(cmd_buf + 3);
+          if (sf >= 7 && sf <= 12) {
+            current_sf = (uint8_t)sf;
+            LoRa.setSpreadingFactor(current_sf);
+            Serial.print("# sf ");
+            Serial.println(current_sf);
+          } else {
+            Serial.println("# sf invalido");
+          }
+        }
+        cmd_len = 0;
+      }
+      continue;
+    }
+
+    if (cmd_len < (sizeof(cmd_buf) - 1)) {
+      cmd_buf[cmd_len++] = c;
+    }
+  }
+
   int packetSize = LoRa.parsePacket();
   if (!packetSize) return;
 
