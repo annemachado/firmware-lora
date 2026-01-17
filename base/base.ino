@@ -1,5 +1,8 @@
 #include <SPI.h>
 #include <LoRa.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 #define LORA_SS   18
 #define LORA_RST  14
@@ -33,11 +36,12 @@ void setup() {
   LoRa.receive();
   
   delay(1000);
-  Serial.println("RX pronto. Aguardando pacotes...");
+  Serial.println("# RX pronto. Aguardando pacotes...");
+  
 }
 
 void loop() {
-  static char cmd_buf[32];
+  static char cmd_buf[64];
   static uint8_t cmd_len = 0;
 
   while (Serial.available() > 0) {
@@ -50,6 +54,7 @@ void loop() {
           if (sf >= 7 && sf <= 12) {
             current_sf = (uint8_t)sf;
             LoRa.setSpreadingFactor(current_sf);
+            LoRa.receive();
             Serial.print("# sf ");
             Serial.println(current_sf);
           } else {
@@ -71,7 +76,7 @@ void loop() {
 
   // 1) validar tamanho esperado (STATUS = 11 bytes)
   if (packetSize != 11) {
-    Serial.print("Pacote descartado. Tamanho=");
+    Serial.print("# Pacote descartado. Tamanho=");
     Serial.println(packetSize);
     while (LoRa.available()) LoRa.read();
     return;
