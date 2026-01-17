@@ -1,5 +1,7 @@
 #include <SPI.h>
 #include <LoRa.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define LORA_SS   18
 #define LORA_RST  14
@@ -21,7 +23,20 @@ const uint8_t MSG_ACK    = 0xC1;
 
 const uint32_t ACK_TIMEOUT_MS = 1500;
 const uint8_t  MAX_RETRIES    = 2;   // total de tentativas = 1 + MAX_RETRIES
-const uint32_t PERIOD_MS = 2000;
+const uint32_t DEFAULT_PERIOD_MS = 2000;
+
+enum SendMode {
+  MODE_STATUS = 0,
+  MODE_ALERT  = 1,
+  MODE_MIXED  = 2
+};
+
+uint32_t period_ms = DEFAULT_PERIOD_MS;
+SendMode send_mode = MODE_MIXED;
+uint16_t mixed_interval = 5;
+
+void handleSerial();
+void processCommand(char *line);
 
 
 void setup() {
@@ -50,12 +65,17 @@ void setup() {
 }
 
 void loop() {
+  handleSerial();
   uint32_t t_loop0 = millis();
 
   seq++;
 
-  // ALERT a cada 5 mensagens (teste)
-  bool isAlert = (seq % 5 == 0); //a cada múltiplo de 5, é ALERT.
+  bool isAlert = false;
+  if (send_mode == MODE_ALERT) {
+    isAlert = true;
+  } else if (send_mode == MODE_MIXED) {
+    isAlert = (mixed_interval > 0) && (seq % mixed_interval == 0);
+  }
   uint8_t msgType = isAlert ? MSG_ALERT : MSG_STATUS; //escolhe o MsgType certo para montar o payload.
 
 
@@ -168,8 +188,110 @@ void loop() {
   Serial.print(isAlert ? -1 : (int)flags);   Serial.print(",");//se for ALERT, Flags não se aplica → -1.
   Serial.println(isAlert ? (int)eventClass : -1); //se for STATUS, EventClass não se aplica → -1.
   
-  // Período fixo de 2s (quando possível)
+  // Período configurável (quando possível)
   uint32_t spent = millis() - t_loop0;
-  if (spent < PERIOD_MS) delay(PERIOD_MS - spent);
+  if (spent < period_ms) delay(period_ms - spent);
 }
 
+void handleSerial() {
+  static char cmd_buf[64];
+  static uint8_t cmd_len = 0;
+
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+    if (c == '\r') continue;
+    if (c == '\n') {
+      cmd_buf[cmd_len] = '\0';
+      if (cmd_len > 0) {
+        processCommand(cmd_buf);
+      }
+      cmd_len = 0;
+      continue;
+    }
+
+    if (cmd_len < sizeof(cmd_buf) - 1) {
+      cmd_buf[cmd_len++] = c;
+    }
+  }
+}
+
+void processCommand(char *line) {
+  while (*line == ' ') line++;
+  if (*line == '\0') return;
+
+  char *token = strtok(line, " ");
+  if (!token) return;
+
+  if (strcmp(token, "period") == 0) {
+    char *value = strtok(nullptr, " ");
+    if (!value) {
+      Serial.println("# usage: period <ms>");
+      return;
+    }
+    uint32_t new_period = (uint32_t)strtoul(value, nullptr, 10);
+    if (new_period == 0) {
+      Serial.println("# invalid period");
+      return;
+    }
+    period_ms = new_period;
+    Serial.print("# period ");
+    Serial.println(period_ms);
+    return;
+  }
+
+  if (strcmp(token, "sf") == 0) {
+    char *value = strtok(nullptr, " ");
+    if (!value) {
+      Serial.println("# usage: sf <7..12>");
+      return;
+    }
+    int sf = atoi(value);
+    if (sf < 7 || sf > 12) {
+      Serial.println("# invalid sf");
+      return;
+    }
+    LoRa.setSpreadingFactor(sf);
+    Serial.print("# sf ");
+    Serial.println(sf);
+    return;
+  }
+
+  if (strcmp(token, "mode") == 0) {
+    char *mode = strtok(nullptr, " ");
+    if (!mode) {
+      Serial.println("# usage: mode status|alert|mixed <N>");
+      return;
+    }
+    if (strcmp(mode, "status") == 0) {
+      send_mode = MODE_STATUS;
+      Serial.println("# mode status");
+      return;
+    }
+    if (strcmp(mode, "alert") == 0) {
+      send_mode = MODE_ALERT;
+      Serial.println("# mode alert");
+      return;
+    }
+    if (strcmp(mode, "mixed") == 0) {
+      char *value = strtok(nullptr, " ");
+      if (!value) {
+        Serial.println("# usage: mode mixed <N>");
+        return;
+      }
+      uint16_t interval = (uint16_t)strtoul(value, nullptr, 10);
+      if (interval == 0) {
+        Serial.println("# invalid mixed interval");
+        return;
+      }
+      send_mode = MODE_MIXED;
+      mixed_interval = interval;
+      Serial.print("# mode mixed ");
+      Serial.println(mixed_interval);
+      return;
+    }
+    Serial.println("# invalid mode");
+    return;
+  }
+
+  Serial.println("# unknown command");
+}
