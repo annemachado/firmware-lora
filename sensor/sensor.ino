@@ -21,9 +21,9 @@ const uint8_t MSG_ALERT  = 0xA1;
 const uint8_t MSG_STATUS = 0xB1;
 const uint8_t MSG_ACK    = 0xC1;
 
-const uint32_t ACK_TIMEOUT_MS = 1500;
+const uint32_t ACK_TIMEOUT_MS = 950;
 const uint8_t  MAX_RETRIES    = 2;   // total de tentativas = 1 + MAX_RETRIES
-const uint32_t DEFAULT_PERIOD_MS = 2000;
+const uint32_t DEFAULT_PERIOD_MS = 3000;
 const char FW_ID[] = "sensor";
 
 enum SendMode {
@@ -148,13 +148,15 @@ void loop() {
     attempt_final = attempt;
 
     // Marca o tempo antes do envio (base do RTT desta tentativa)
-    uint32_t t0 = millis();
+    //uint32_t t0 = millis();
 
     // Envia o payload
+    uint32_t t0 = millis();
     LoRa.beginPacket();
     LoRa.write(payload, sizeof(payload));  // envia bytes brutos
     LoRa.endPacket();
     LoRa.receive();
+    
 
     // 3) esperar ACK até timeout
     while (millis() - t0 < ACK_TIMEOUT_MS) {
