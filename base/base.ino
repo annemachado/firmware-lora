@@ -122,8 +122,9 @@ void loop() {
 
   // Validação  do tipo
   if (msgType != MSG_STATUS && msgType != MSG_ALERT) {
-    Serial.print("MsgType inesperado=0x");
+    Serial.print("# MsgType inesperado=0x");
     Serial.println(msgType, HEX);
+    while (LoRa.available()) LoRa.read(); // drena
     return;
   }
 
