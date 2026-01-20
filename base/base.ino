@@ -16,6 +16,10 @@ const uint8_t MSG_ACK    = 0xC1;
 
 uint8_t current_sf = 7;
 
+void handleSerial();
+void printMenu();
+void printStatus();
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) {}
@@ -36,40 +40,19 @@ void setup() {
   LoRa.receive();
   
   delay(1000);
+  Serial.print("# BOOT base freq=");
+  Serial.print((uint32_t)LORA_FREQ);
+  Serial.print(" sf=");
+  Serial.print(current_sf);
+  Serial.print(" bw=125000 cr=4/5 crc=on");
+  Serial.println();
   Serial.println("# RX pronto. Aguardando pacotes...");
+  printMenu();
   
 }
 
 void loop() {
-  static char cmd_buf[64];
-  static uint8_t cmd_len = 0;
-
-  while (Serial.available() > 0) {
-    char c = (char)Serial.read();
-    if (c == '\n' || c == '\r') {
-      if (cmd_len > 0) {
-        cmd_buf[cmd_len] = '\0';
-        if (strncmp(cmd_buf, "sf ", 3) == 0) {
-          int sf = atoi(cmd_buf + 3);
-          if (sf >= 7 && sf <= 12) {
-            current_sf = (uint8_t)sf;
-            LoRa.setSpreadingFactor(current_sf);
-            LoRa.receive();
-            Serial.print("# sf ");
-            Serial.println(current_sf);
-          } else {
-            Serial.println("# sf invalido");
-          }
-        }
-        cmd_len = 0;
-      }
-      continue;
-    }
-
-    if (cmd_len < (sizeof(cmd_buf) - 1)) {
-      cmd_buf[cmd_len++] = c;
-    }
-  }
+  handleSerial();
 
   int packetSize = LoRa.parsePacket();
   if (!packetSize) return;
@@ -182,4 +165,68 @@ void loop() {
   }
   Serial.println();
 
+}
+
+void handleSerial() {
+  static char cmd_buf[64];
+  static uint8_t cmd_len = 0;
+
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      if (cmd_len > 0) {
+        cmd_buf[cmd_len] = '\0';
+        char *line = cmd_buf;
+        while (*line == ' ') line++;
+        char *token = strtok(line, " ");
+        if (token) {
+          if (strcmp(token, "sf") == 0) {
+            char *value = strtok(nullptr, " ");
+            if (!value) {
+              Serial.println("# usage: sf <7..12>");
+            } else {
+              int sf = atoi(value);
+              if (sf >= 7 && sf <= 12) {
+                current_sf = (uint8_t)sf;
+                LoRa.setSpreadingFactor(current_sf);
+                LoRa.receive();
+                Serial.print("# sf ");
+                Serial.println(current_sf);
+              } else {
+                Serial.println("# sf invalido");
+              }
+            }
+          } else if (strcmp(token, "help") == 0) {
+            printMenu();
+          } else if (strcmp(token, "status") == 0) {
+            printStatus();
+          } else {
+            Serial.println("# comando desconhecido");
+          }
+        }
+        cmd_len = 0;
+      }
+      continue;
+    }
+
+    if (cmd_len < (sizeof(cmd_buf) - 1)) {
+      cmd_buf[cmd_len++] = c;
+    }
+  }
+}
+
+void printMenu() {
+  Serial.println("# MENU base");
+  Serial.println("# comandos:");
+  Serial.println("#  help         -> mostrar menu");
+  Serial.println("#  status       -> mostrar configuracao");
+  Serial.println("#  sf <7..12>   -> alterar spreading factor");
+}
+
+void printStatus() {
+  Serial.print("# STATUS sf=");
+  Serial.print(current_sf);
+  Serial.print(" freq=");
+  Serial.print((uint32_t)LORA_FREQ);
+  Serial.println(" bw=125000 cr=4/5 crc=on");
 }

@@ -38,10 +38,19 @@ uint16_t mixed_interval = 5;
 bool transmitting = false;
 int current_sf = 7;
 char run_id[16] = "";
+char run_note[33] = "";
+uint16_t dist_m = 0;
+uint16_t n_msgs = 0;
+uint16_t sent_count = 0;
+uint16_t ack_ok_count = 0;
+uint16_t fail_count = 0;
 
 void handleSerial();
 void processCommand(char *line);
 void printConfig();
+void printMenu();
+void printChecklist();
+bool missingRequired();
 const char *modeLabel();
 
 
@@ -82,6 +91,7 @@ void setup() {
   Serial.print(" max_retries=");
   Serial.println(MAX_RETRIES);
   Serial.println("# TX pronto. Aguardando start.");
+  printMenu();
 
 }
 
@@ -93,6 +103,29 @@ void loop() {
   }
   uint32_t t_loop0 = millis();
 
+  if (sent_count >= n_msgs) {
+    transmitting = false;
+    float pdr = (n_msgs > 0) ? ((float)ack_ok_count / (float)n_msgs) : 0.0f;
+    Serial.print("# END run=");
+    Serial.print(run_id);
+    Serial.print(" dist_m=");
+    Serial.print(dist_m);
+    Serial.print(" sf=");
+    Serial.print(current_sf);
+    Serial.print(" period_ms=");
+    Serial.print(period_ms);
+    Serial.print(" n=");
+    Serial.print(n_msgs);
+    Serial.print(" ack_ok=");
+    Serial.print(ack_ok_count);
+    Serial.print(" fail=");
+    Serial.print(fail_count);
+    Serial.print(" pdr=");
+    Serial.println(pdr, 3);
+    return;
+  }
+
+  uint16_t msg_index = sent_count + 1;
   seq++;
 
   bool isAlert = false;
@@ -200,6 +233,21 @@ void loop() {
 
   // MsgType numérico (STATUS = 0xB1). No CSV eu recomendo imprimir como decimal para facilitar filtro.
   // Se você preferir em HEX, eu ajusto depois.
+  if (ack_ok) {
+    ack_ok_count++;
+  } else {
+    fail_count++;
+  }
+  sent_count++;
+
+  Serial.print(run_id);                      Serial.print(",");
+  Serial.print(dist_m);                      Serial.print(",");
+  Serial.print(current_sf);                  Serial.print(",");
+  Serial.print(period_ms);                   Serial.print(",");
+  Serial.print(ACK_TIMEOUT_MS);              Serial.print(",");
+  Serial.print(MAX_RETRIES);                 Serial.print(",");
+  Serial.print(n_msgs);                      Serial.print(",");
+  Serial.print(msg_index);                   Serial.print(",");
   Serial.print(DEV_ID);                      Serial.print(",");
   Serial.print((int)msgType);                Serial.print(",");
   Serial.print(uptime_ms);                   Serial.print(",");
@@ -215,6 +263,28 @@ void loop() {
   Serial.print(isAlert ? -1 : (int)flags);   Serial.print(",");//se for ALERT, Flags não se aplica → -1.
   Serial.println(isAlert ? (int)eventClass : -1); //se for STATUS, EventClass não se aplica → -1.
   
+  if (sent_count >= n_msgs) {
+    transmitting = false;
+    float pdr = (n_msgs > 0) ? ((float)ack_ok_count / (float)n_msgs) : 0.0f;
+    Serial.print("# END run=");
+    Serial.print(run_id);
+    Serial.print(" dist_m=");
+    Serial.print(dist_m);
+    Serial.print(" sf=");
+    Serial.print(current_sf);
+    Serial.print(" period_ms=");
+    Serial.print(period_ms);
+    Serial.print(" n=");
+    Serial.print(n_msgs);
+    Serial.print(" ack_ok=");
+    Serial.print(ack_ok_count);
+    Serial.print(" fail=");
+    Serial.print(fail_count);
+    Serial.print(" pdr=");
+    Serial.println(pdr, 3);
+    return;
+  }
+
   // Período configurável (quando possível)
   uint32_t spent = millis() - t_loop0;
   if (spent < period_ms) delay(period_ms - spent);
@@ -285,11 +355,27 @@ void processCommand(char *line) {
   }
 
   if (strcmp(token, "start") == 0) {
+    if (missingRequired()) {
+      Serial.println("# START bloqueado: faltam parametros obrigatorios.");
+      printChecklist();
+      return;
+    }
     transmitting = true;
+    sent_count = 0;
+    ack_ok_count = 0;
+    fail_count = 0;
     Serial.print("# START dev_id=");
     Serial.print(DEV_ID);
     Serial.print(" run=");
-    Serial.print(run_id[0] ? run_id : "-");
+    Serial.print(run_id);
+    Serial.print(" dist_m=");
+    Serial.print(dist_m);
+    Serial.print(" n=");
+    Serial.print(n_msgs);
+    if (run_note[0]) {
+      Serial.print(" note=");
+      Serial.print(run_note);
+    }
     Serial.print(" freq=");
     Serial.print((uint32_t)LORA_FREQ);
     Serial.print(" sf=");
@@ -304,7 +390,7 @@ void processCommand(char *line) {
     Serial.print(ACK_TIMEOUT_MS);
     Serial.print(" max_retries=");
     Serial.println(MAX_RETRIES);
-    Serial.println("# DevID,MsgType,Uptime_ms,Seq,attempt_final,ack_ok,RTT_ms,RSSI_dBm,SNR_dB,Battery_mV,Flags,EventClass");
+    Serial.println("# RunID,Dist_m,SF,Period_ms,AckTimeout_ms,MaxRetries,N_msgs_planned,MsgIndex,DevID,MsgType,Uptime_ms,Seq,attempt_final,ack_ok,RTT_ms,RSSI_dBm,SNR_dB,Battery_mV,Flags,EventClass");
     return;
   }
 
@@ -329,6 +415,64 @@ void processCommand(char *line) {
 
   if (strcmp(token, "status") == 0) {
     printConfig();
+    return;
+  }
+
+  if (strcmp(token, "check") == 0) {
+    printConfig();
+    return;
+  }
+
+  if (strcmp(token, "help") == 0) {
+    printMenu();
+    return;
+  }
+
+  if (strcmp(token, "dist") == 0) {
+    char *value = strtok(nullptr, " ");
+    if (!value) {
+      Serial.println("# usage: dist <metros>");
+      return;
+    }
+    uint32_t dist_value = (uint32_t)strtoul(value, nullptr, 10);
+    if (dist_value == 0 || dist_value > 65535) {
+      Serial.println("# invalid dist");
+      return;
+    }
+    dist_m = (uint16_t)dist_value;
+    Serial.print("# dist ");
+    Serial.println(dist_m);
+    return;
+  }
+
+  if (strcmp(token, "n") == 0) {
+    char *value = strtok(nullptr, " ");
+    if (!value) {
+      Serial.println("# usage: n <quantidade>");
+      return;
+    }
+    uint32_t n_value = (uint32_t)strtoul(value, nullptr, 10);
+    if (n_value == 0 || n_value > 65535) {
+      Serial.println("# invalid n");
+      return;
+    }
+    n_msgs = (uint16_t)n_value;
+    Serial.print("# n ");
+    Serial.println(n_msgs);
+    return;
+  }
+
+  if (strcmp(token, "note") == 0) {
+    char *value = strtok(nullptr, "");
+    if (!value) {
+      Serial.println("# usage: note <texto_curto>");
+      return;
+    }
+    while (*value == ' ') value++;
+    strncpy(run_note, value, sizeof(run_note) - 1);
+    run_note[sizeof(run_note) - 1] = '\0';
+    Serial.print("# note ");
+    Serial.println(run_note);
     return;
   }
 
@@ -373,7 +517,15 @@ void processCommand(char *line) {
 }
 
 void printConfig() {
-  Serial.print("# CONFIG period_ms=");
+  Serial.print("# CONFIG run=");
+  Serial.print(run_id[0] ? run_id : "-");
+  Serial.print(" dist_m=");
+  Serial.print(dist_m);
+  Serial.print(" n=");
+  Serial.print(n_msgs);
+  Serial.print(" note=");
+  Serial.print(run_note[0] ? run_note : "-");
+  Serial.print(" period_ms=");
   Serial.print(period_ms);
   Serial.print(" sf=");
   Serial.print(current_sf);
@@ -385,6 +537,7 @@ void printConfig() {
   Serial.print(ACK_TIMEOUT_MS);
   Serial.print(" max_retries=");
   Serial.println(MAX_RETRIES);
+  printChecklist();
 }
 
 const char *modeLabel() {
@@ -397,4 +550,42 @@ const char *modeLabel() {
     default:
       return "mixed";
   }
+}
+
+void printMenu() {
+  Serial.println("# MENU");
+  Serial.println("# comandos:");
+  Serial.println("#  help               -> mostrar menu");
+  Serial.println("#  check|status       -> mostrar configuracao e pendencias");
+  Serial.println("#  run <id>           -> define identificador da rodada");
+  Serial.println("#  dist <metros>      -> distancia em metros (ex: 150)");
+  Serial.println("#  n <quantidade>     -> numero de mensagens da rodada");
+  Serial.println("#  note <texto_curto> -> observacao (opcional)");
+  Serial.println("#  sf <7..12>         -> spreading factor");
+  Serial.println("#  period <ms>        -> intervalo entre mensagens");
+  Serial.println("#  mode status|alert|mixed <N>");
+  Serial.println("#  start              -> iniciar rodada");
+  Serial.println("#  stop               -> parar transmissao");
+  printChecklist();
+}
+
+void printChecklist() {
+  Serial.print("# checklist ");
+  Serial.print("run_id=");
+  Serial.print(run_id[0] ? "ok" : "missing");
+  Serial.print(" dist_m=");
+  Serial.print(dist_m > 0 ? "ok" : "missing");
+  Serial.print(" n_msgs=");
+  Serial.print(n_msgs > 0 ? "ok" : "missing");
+  if (missingRequired()) {
+    Serial.print(" missing:");
+    if (!run_id[0]) Serial.print(" run_id");
+    if (dist_m == 0) Serial.print(" dist_m");
+    if (n_msgs == 0) Serial.print(" n_msgs");
+  }
+  Serial.println();
+}
+
+bool missingRequired() {
+  return (!run_id[0] || dist_m == 0 || n_msgs == 0);
 }
