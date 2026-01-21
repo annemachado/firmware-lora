@@ -16,6 +16,8 @@ bool init_radio(long freq, int ss, int rst, int dio0, int sf, long bw, int cr, i
   LoRa.setTxPower(tx_power);
   if (enable_crc) {
     LoRa.enableCrc();
+  } else {
+    LoRa.disableCrc();
   }
 
   return true;
@@ -39,6 +41,7 @@ bool send_with_ack(const uint8_t *payload11, uint16_t seq, uint32_t timeout_ms, 
     while (millis() - t0 < timeout_ms) {
       int packet_size = LoRa.parsePacket();
       if (!packet_size) {
+        delay(1);
         continue;
       }
 
@@ -102,7 +105,7 @@ ReceiveStatus receive_status_alert(ReceivedPacket &out, int packet_size) {
   return ReceiveStatus::kOk;
 }
 
-void send_ack_for_seq(uint16_t seq, int rssi_int, float snr_f) {
+void send_ack_for_seq(uint16_t seq, int rssi_int, float snr_f, uint8_t *out_ack_raw) {
   int8_t rssi_dbm = static_cast<int8_t>(rssi_int);
   int snr_round = static_cast<int>(snr_f >= 0 ? (snr_f + 0.5f) : (snr_f - 0.5f));
   int8_t snr_db = static_cast<int8_t>(snr_round);
@@ -113,7 +116,8 @@ void send_ack_for_seq(uint16_t seq, int rssi_int, float snr_f) {
   ack.rssi_dbm = rssi_dbm;
   ack.snr_db = snr_db;
 
-  uint8_t ack_raw[protocol::ACK_SIZE];
+  uint8_t ack_raw_local[protocol::ACK_SIZE];
+  uint8_t *ack_raw = out_ack_raw ? out_ack_raw : ack_raw_local;
   protocol::pack_ack(ack, ack_raw);
 
   LoRa.beginPacket();

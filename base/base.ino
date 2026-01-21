@@ -116,13 +116,7 @@ void loop() {
   Serial.print(" dB -> ACK(5B) enviado: ");
 
   uint8_t ack_raw[protocol::ACK_SIZE];
-  protocol::Ack ack{};
-  ack.msg_type = protocol::MSG_ACK;
-  ack.seq = seq;
-  ack.rssi_dbm = static_cast<int8_t>(rssi_int);
-  ack.snr_db = static_cast<int8_t>(snr_f >= 0 ? (snr_f + 0.5f) : (snr_f - 0.5f));
-  protocol::pack_ack(ack, ack_raw);
-  lora_link::send_ack_for_seq(seq, rssi_int, snr_f);
+  lora_link::send_ack_for_seq(seq, rssi_int, snr_f, ack_raw);
 
   for (size_t i = 0; i < protocol::ACK_SIZE; i++) {
     if (ack_raw[i] < 16) Serial.print('0');
