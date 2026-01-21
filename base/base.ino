@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../common/lora_link.h"
-#include "../common/protocol.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.h"
 
 
 #define LORA_SS   18
