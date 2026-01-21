@@ -62,9 +62,6 @@ void setup() {
     while (true) {}
   }
 
-  // parâmetros básicos
-  LoRa.setSpreadingFactor(current_sf);     // SF7 (inicial)
-
   delay(1500);
   Serial.print("# BOOT ");
   Serial.print(FW_ID);
