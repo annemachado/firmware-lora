@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #include "event_model.h"
-#include "../VoiceRecognitionV3_ESP/VoiceRecognitionV3_ESP.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.h"
 
 namespace vr_link {
 
