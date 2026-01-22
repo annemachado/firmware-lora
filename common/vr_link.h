@@ -32,6 +32,9 @@ class VrLink {
 
   bool clear_records();
   bool load_record(uint8_t record_id);
+  bool load_records(const uint8_t *records, size_t record_count);
+  bool check();
+  bool train_record(uint8_t record_id);
 
   Status poll(event_model::DetectionEvent &out_event);
 

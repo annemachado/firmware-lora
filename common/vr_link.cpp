@@ -61,6 +61,32 @@ bool VrLink::load_record(uint8_t record_id) {
   return vr_->load(&record, 1) >= 0;
 }
 
+bool VrLink::load_records(const uint8_t *records, size_t record_count) {
+  if (!is_ready()) {
+    return false;
+  }
+  if (records == nullptr || record_count == 0) {
+    return false;
+  }
+  return vr_->load(records, record_count) >= 0;
+}
+
+bool VrLink::check() {
+  if (!is_ready()) {
+    return false;
+  }
+  uint8_t buffer[8] = {0};
+  return vr_->checkRecognizer(buffer, sizeof(buffer), config_.poll_timeout_ms) >= 0;
+}
+
+bool VrLink::train_record(uint8_t record_id) {
+  if (!is_ready()) {
+    return false;
+  }
+  uint8_t record = record_id;
+  return vr_->train(&record, 1) >= 0;
+}
+
 Status VrLink::poll(event_model::DetectionEvent &out_event) {
   if (!is_ready()) {
     reset_event(out_event, false);
