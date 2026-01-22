@@ -1,14 +1,15 @@
 #include <Arduino.h>
 
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.cpp"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.cpp"
 
 vr_link::VrLink vr;
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {
-    delay(10);
-  }
+  delay(1500);               // dá tempo do monitor conectar
+  Serial.println("\n[BOOT] vr_smoke_test iniciou");
 
   vr_link::Config cfg;
   cfg.serial = &Serial2;
@@ -17,10 +18,11 @@ void setup() {
   cfg.tx_pin = 17;
   cfg.poll_timeout_ms = 30;
 
+  Serial.println("[BOOT] chamando vr.begin(...)");
   if (!vr.begin(cfg)) {
-    Serial.println("VR3.1 init failed");
+    Serial.println("[BOOT] VR3.1 init failed");
   } else {
-    Serial.println("VR3.1 ready");
+    Serial.println("[BOOT] VR3.1 ready");
   }
 }
 
