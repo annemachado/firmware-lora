@@ -1,4 +1,4 @@
-#include "vr_link.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.h"
 
 namespace vr_link {
 
@@ -58,7 +58,7 @@ bool VrLink::load_record(uint8_t record_id) {
     return false;
   }
   uint8_t record = record_id;
-  return vr_->load(&record, 1) >= 0;
+  return vr_->load(&record, 1) > 0; //mudei para >0 pois quando vr_->load(&record, 1) significa que não teve dados para copiar no VR_ESP::load
 }
 
 bool VrLink::load_records(const uint8_t *records, size_t record_count) {
@@ -68,15 +68,53 @@ bool VrLink::load_records(const uint8_t *records, size_t record_count) {
   if (records == nullptr || record_count == 0) {
     return false;
   }
-  return vr_->load(records, record_count) >= 0;
+  return vr_->load(records, record_count) > 0; //mudei para >0 pois quando vr_->load(&record, 1) significa que não teve dados para copiar no VR_ESP::load
 }
 
-bool VrLink::check() {
+bool VrLink::check(RecognizerStatus &out_status) {
+  // 1) valida inicialização
   if (!is_ready()) {
+    out_status = RecognizerStatus{};
     return false;
   }
-  uint8_t buffer[8] = {0};
-  return vr_->checkRecognizer(buffer, sizeof(buffer), config_.poll_timeout_ms) >= 0;
+
+  // 2) lê o BSR do recognizer
+  uint8_t buffer[vr_link::kCheckRawMax] = {0};  // 0..10 (11 bytes) conforme documentação do driver
+  const int n = vr_->checkRecognizer(buffer, sizeof(buffer), config_.poll_timeout_ms);
+
+  if (n < 0) {
+    // -1 timeout/curto; -2 comando inesperado
+    out_status = RecognizerStatus{};
+    return false;
+  }
+ 
+  // 3) preenche struct com o que veio (com cuidado para não ler além do que foi copiado)
+  out_status = RecognizerStatus{};
+  out_status.raw_len = static_cast<uint8_t>(n);
+
+   // Campos só se existirem (n indica quantos bytes foram copiados)
+  if (n >= 1) {
+    out_status.valid_count = buffer[0];
+  }
+
+  // loaded_ids: bytes 1..7
+  for (int i = 0; i < 7; i++) {
+    const int idx = 1 + i;
+    if (n > idx) {
+      out_status.loaded_ids[i] = buffer[idx];
+    }
+  }
+
+  if (n >= 9) {
+    out_status.total_records = buffer[8];
+  }
+  if (n >= 10) {
+    out_status.valid_bitmap = buffer[9];
+  }
+  if (n >= 11) {
+    out_status.group_mode = buffer[10];
+  }
+    return true;
 }
 
 bool VrLink::train_record(uint8_t record_id) {

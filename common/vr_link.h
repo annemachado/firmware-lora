@@ -2,10 +2,12 @@
 
 #include <Arduino.h>
 
-#include "event_model.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\event_model.h"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.h"
 
 namespace vr_link {
+
+constexpr size_t kCheckRawMax = 11;  // espaço seguro
 
 enum class Status {
   kOk,
@@ -22,6 +24,15 @@ struct Config {
   uint16_t poll_timeout_ms;
 };
 
+struct RecognizerStatus {
+  uint8_t valid_count = 0;     // outBuf[0]
+  uint8_t loaded_ids[7] = {0}; // outBuf[1..7]
+  uint8_t total_records = 0;   // outBuf[8]
+  uint8_t valid_bitmap = 0;    // outBuf[9]
+  uint8_t group_mode = 0;      // outBuf[10]
+  uint8_t raw_len = 0;         // bytes efetivamente recebidos/copiados
+};
+
 class VrLink {
  public:
   VrLink();
@@ -33,7 +44,7 @@ class VrLink {
   bool clear_records();
   bool load_record(uint8_t record_id);
   bool load_records(const uint8_t *records, size_t record_count);
-  bool check();
+  bool check(RecognizerStatus &out_status);
   bool train_record(uint8_t record_id);
 
   Status poll(event_model::DetectionEvent &out_event);
