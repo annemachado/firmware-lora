@@ -1,8 +1,6 @@
 #include <Arduino.h>
 
-#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.h"
-#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.cpp"
-#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.cpp"
+#include <vr_link.h>
 
 vr_link::VrLink vr;
 
