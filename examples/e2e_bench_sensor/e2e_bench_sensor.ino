@@ -2,13 +2,13 @@
 #include <LoRa.h>
 #include <SPI.h>
 
-#include "../../common/vr_link.h"
-#include "../../common/vr_link.cpp"
-#include "../../common/lora_link.h"
-#include "../../common/lora_link.cpp"
-#include "../../common/protocol.h"
-#include "../../common/protocol.cpp"
-#include "../../VoiceRecognitionV3_ESP/VoiceRecognitionV3_ESP.cpp"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.cpp"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.cpp"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.h"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.cpp"
+#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.cpp"
 
 #define LORA_SS 18
 #define LORA_RST 14

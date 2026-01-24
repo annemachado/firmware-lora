@@ -5,6 +5,7 @@
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.cpp"
 
 vr_link::VrLink vr;
+vr_link::RecognizerStatus st;
 bool run_mode = false;
 
 constexpr size_t kMaxIds = 20;
@@ -55,11 +56,24 @@ void handle_command(const String &line) {
 
   if (strcmp(token, "check") == 0) {
     Serial.println("[CMD] check");
-    if (vr.check()) {
-      Serial.println("[CMD] check ok");
+    if (vr.check(st)) {
+      Serial.print("[BSR] valid_count=");
+      Serial.print(st.valid_count);
+      Serial.print(" total_records=");
+      Serial.print(st.total_records);
+      Serial.print(" group_mode=0x");
+      Serial.println(st.group_mode, HEX);
+
+      Serial.print("[BSR] loaded_ids: ");
+      for (int i = 0; i < 7; i++) {
+        Serial.print(st.loaded_ids[i], HEX);
+        Serial.print(' ');
+      }
+      Serial.println();
     } else {
       Serial.println("[ERR] check failed");
     }
+    
     return;
   }
 
