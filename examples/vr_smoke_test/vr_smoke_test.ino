@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
-#include <vr_link.h>
+#include "../common/vr_link.h"
+#include "../common/vr_link.cpp"
 
 vr_link::VrLink vr;
 

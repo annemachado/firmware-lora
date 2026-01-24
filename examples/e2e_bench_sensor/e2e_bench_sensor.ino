@@ -2,7 +2,8 @@
 #include <LoRa.h>
 #include <SPI.h>
 
-#include <vr_link.h>
+#include "../../common/vr_link.h"
+#include "../../common/vr_link.cpp"
 #include "../../common/lora_link.h"
 #include "../../common/lora_link.cpp"
 #include "../../common/protocol.h"

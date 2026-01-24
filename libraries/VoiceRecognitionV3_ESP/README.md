@@ -81,8 +81,8 @@ Main driver API in `VoiceRecognitionV3_ESP.h`:
 - `checkRecognizer(outBuf, outLen, timeoutMs)`
 
 > Note: This README is for the **base driver**.  
-> If you prefer a higher-level wrapper, see the `vr_link` helper in
-> `libraries/vr_link/`.
+> In this repository there is a higher-level helper (`vr_link`) located in
+> `common/vr_link.h`, but it is not part of this library.
 
 ## Troubleshooting
 
