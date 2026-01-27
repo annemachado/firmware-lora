@@ -13,7 +13,7 @@ AcousticDeforestCore is an Arduino library that packages the core firmware modul
 1. Copy the `AcousticDeforestCore` folder into your Arduino libraries directory, e.g. `Documents/Arduino/libraries/AcousticDeforestCore`.
 2. In **Library Manager**, install:
    - **LoRa** by Sandeep Mistry.
-   - **VoiceRecognitionV3_ESP32** [annemachado/VoiceRecognitionV3_ESP32](annemachado/VoiceRecognitionV3_ESP32) (install it manually if it is not listed in the manager).
+   - **VoiceRecognitionV3_ESP32** [https://github.com/annemachado/VoiceRecognitionV3_ESP32](annemachado/VoiceRecognitionV3_ESP32) (install it manually if it is not listed in the manager).
 3. Open any example sketch from **File > Examples > AcousticDeforestCore**.
 
 ## Project structure
