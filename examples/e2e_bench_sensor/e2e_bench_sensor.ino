@@ -8,7 +8,7 @@
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.cpp"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.h"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.cpp"
-#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\VoiceRecognitionV3_ESP\VoiceRecognitionV3_ESP.cpp"
+
 
 #define LORA_SS 18
 #define LORA_RST 14
@@ -273,7 +273,7 @@ void loop() {
 
     lora_link::AckMetrics metrics{};
     const bool ack_ok = lora_link::send_with_ack(payload, seq, ACK_TIMEOUT_MS, MAX_RETRIES, metrics);
-
+    
     Serial.print("[E2E] ts_ms=");
     Serial.print(now_ms);
     Serial.print(" record_id=");

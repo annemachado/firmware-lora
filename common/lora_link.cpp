@@ -23,7 +23,7 @@ bool init_radio(long freq, int ss, int rst, int dio0, int sf, long bw, int cr, i
   return true;
 }
 
-bool send_with_ack(const uint8_t *payload11, uint16_t seq, uint32_t timeout_ms, uint8_t max_retries,
+/*bool send_with_ack(const uint8_t *payload11, uint16_t seq, uint32_t timeout_ms, uint8_t max_retries,
                    AckMetrics &out_metrics) {
   out_metrics = {};
 
@@ -80,6 +80,89 @@ bool send_with_ack(const uint8_t *payload11, uint16_t seq, uint32_t timeout_ms, 
     delay(50);
   }
 
+  return ack_ok;
+}*/
+
+bool send_with_ack(const uint8_t *payload11, uint16_t seq, uint32_t timeout_ms, uint8_t max_retries,
+                   AckMetrics &out_metrics) {
+  out_metrics = {};   // zera tudo
+
+  bool ack_ok = false;
+
+  // (A) define o "início do processo" na 1ª tentativa
+  //     (vamos setar no começo da 1ª tentativa para ficar consistente)
+  for (uint8_t attempt = 1; attempt <= static_cast<uint8_t>(1 + max_retries); attempt++) {
+    out_metrics.attempts = attempt;
+
+    // (B) t0 da tentativa (referência do RTT desta tentativa)
+    const uint32_t t0_attempt = millis();
+
+    // (C) tx_first_ms: apenas na 1ª tentativa
+    if (attempt == 1) {
+      out_metrics.tx_first_ms = t0_attempt;
+    }
+
+    // (D) tx_last_ms: sempre atualiza com o início desta tentativa
+    out_metrics.tx_last_ms = t0_attempt;
+
+    // Envia o payload
+    LoRa.beginPacket();
+    LoRa.write(payload11, protocol::STATUS_ALERT_SIZE);
+    LoRa.endPacket();
+    LoRa.receive();
+
+    while (millis() - t0_attempt < timeout_ms) {
+      int packet_size = LoRa.parsePacket();
+      if (!packet_size) {
+        delay(1);
+        continue;
+      }
+
+      if (packet_size != static_cast<int>(protocol::ACK_SIZE)) {
+        while (LoRa.available()) {
+          LoRa.read();
+        }
+        continue;
+      }
+
+      uint8_t ack_raw[protocol::ACK_SIZE];
+      for (size_t i = 0; i < protocol::ACK_SIZE; i++) {
+        ack_raw[i] = static_cast<uint8_t>(LoRa.read());
+      }
+
+      protocol::Ack ack{};
+      if (!protocol::unpack_ack(ack_raw, protocol::ACK_SIZE, ack)) {
+        continue;
+      }
+
+      if (ack.msg_type != protocol::MSG_ACK || ack.seq != seq) {
+        continue;
+      }
+
+      // (E) ACK válido: carimba o instante real de recepção
+      const uint32_t ack_rx_ms = millis();
+
+      ack_ok = true;
+
+      out_metrics.ack_rx_ms = ack_rx_ms;
+      out_metrics.rtt_ms = ack_rx_ms - t0_attempt;   // RTT da tentativa que deu certo
+      out_metrics.ack_rssi = ack.rssi_dbm;
+      out_metrics.ack_snr = ack.snr_db;
+
+      break;
+    }
+
+    if (ack_ok) {
+      break;
+    }
+
+    delay(50);
+  }
+
+  // (F) sempre carimba fim do processo (mesmo se falhar)
+  out_metrics.tx_end_ms = millis();
+
+  // Se falhou, mantém ack_rx_ms = 0 e rtt_ms = 0 (ou você pode padronizar rtt_ms=UINT32_MAX, mas 0 é ok)
   return ack_ok;
 }
 

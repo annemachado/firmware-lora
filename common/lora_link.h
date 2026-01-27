@@ -8,10 +8,15 @@
 namespace lora_link {
 
 struct AckMetrics {
-  uint8_t attempts;
-  uint32_t rtt_ms;
-  int8_t ack_rssi;
-  int8_t ack_snr;
+  uint8_t attempts = 0;
+  uint32_t rtt_ms = 0;
+  int8_t ack_rssi = 0;
+  int8_t ack_snr = 0;
+
+  uint32_t tx_first_ms = 0;
+  uint32_t tx_last_ms = 0;
+  uint32_t ack_rx_ms = 0;
+  uint32_t tx_end_ms = 0;
 };
 
 struct ReceivedPacket {
