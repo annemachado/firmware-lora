@@ -1,0 +1,17 @@
+# Syntax Coloring Map For VoiceRecognitionV3_ESP
+
+# Datatypes (KEYWORD1)
+VR_ESP	KEYWORD1
+
+# Methods (KEYWORD2)
+begin	KEYWORD2
+clear	KEYWORD2
+load	KEYWORD2
+recognize	KEYWORD2
+checkRecognizer	KEYWORD2
+train	KEYWORD2
+
+# Constants (LITERAL1)
+FRAME_HEAD	LITERAL1
+FRAME_END	LITERAL1
+VR_DEFAULT_TIMEOUT_MS	LITERAL1

@@ -2,12 +2,14 @@
 #include <LoRa.h>
 #include <SPI.h>
 
+
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.h"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\vr_link.cpp"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.h"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.cpp"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.h"
 #include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.cpp"
+
 
 
 #define LORA_SS 18

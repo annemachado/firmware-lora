@@ -1,4 +1,4 @@
-#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\lora_link.h"
+#include "lora_link.h"
 
 namespace lora_link {
 

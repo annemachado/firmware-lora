@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <LoRa.h>
 
-#include "C:\Users\Annek\Documents\Arduino\MeuFirmware\common\protocol.h"
+#include "protocol.h"
 
 namespace lora_link {
 
